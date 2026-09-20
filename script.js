@@ -1,78 +1,63 @@
-/* =========================================================
-   COAST WATER
-   Production interaction layer
-========================================================= */
-
 (() => {
     "use strict";
 
-    const $ = (selector, parent = document) =>
-        parent.querySelector(selector);
-
-    const $$ = (selector, parent = document) =>
-        [...parent.querySelectorAll(selector)];
+    const $ = (selector, root = document) => root.querySelector(selector);
+    const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
     const body = document.body;
-    const html = document.documentElement;
-
+    const navbar = $("#navbar");
     const loader = $("#loader");
     const hero = $(".hero");
-    const navbar = $("#navbar");
     const cursor = $("#cursor");
-    const progressBar = $("#scrollProgress span");
+    const progressBar = $("#scrollProgress");
+    const mobileMenu = $("#mobileMenu");
+    const menuToggle = $("#menuToggle");
+    const contactModal = $("#contactModal");
+    const contactForm = $("#contactForm");
+    const toast = $("#toast");
+    const toastMessage = $("#toastMessage");
 
-    const reducedMotion = window.matchMedia(
-        "(prefers-reduced-motion: reduce)"
-    ).matches;
+    const prefersReducedMotion =
+        window.matchMedia("(prefers-reduced-motion: reduce)");
 
-    const finePointer = window.matchMedia(
-        "(pointer: fine)"
-    ).matches;
+    const finePointer =
+        window.matchMedia("(pointer: fine)").matches;
 
 
-    /* =====================================================
+    /* ------------------------------
        LOAD STATE
-    ===================================================== */
+    ------------------------------ */
 
-    function finishLoading() {
+    const revealHero = () => {
         loader?.classList.add("loaded");
         hero?.classList.add("loaded");
-        body.classList.add("loaded");
-    }
+    };
 
     if (document.readyState === "complete") {
-        finishLoading();
+        requestAnimationFrame(revealHero);
     } else {
-        window.addEventListener(
-            "load",
-            finishLoading,
-            { once: true }
-        );
+        window.addEventListener("load", revealHero, { once: true });
     }
 
 
-    /* =====================================================
-       SCROLL STATE
-    ===================================================== */
+    /* ------------------------------
+       SCROLL UI
+    ------------------------------ */
 
     let scrollTicking = false;
 
-    function updateScrollState() {
+    const updateScrollUI = () => {
+        scrollTicking = false;
 
         const scrollTop = window.scrollY;
 
         const scrollHeight =
-            html.scrollHeight - window.innerHeight;
+            document.documentElement.scrollHeight -
+            window.innerHeight;
 
         const progress =
             scrollHeight > 0
-                ? Math.min(
-                    100,
-                    Math.max(
-                        0,
-                        (scrollTop / scrollHeight) * 100
-                    )
-                )
+                ? (scrollTop / scrollHeight) * 100
                 : 0;
 
         if (progressBar) {
@@ -85,20 +70,14 @@
                 scrollTop > 50
             );
         }
+    };
 
-        scrollTicking = false;
-    }
-
-    function requestScrollUpdate() {
-
+    const requestScrollUpdate = () => {
         if (!scrollTicking) {
-            window.requestAnimationFrame(
-                updateScrollState
-            );
-
             scrollTicking = true;
+            requestAnimationFrame(updateScrollUI);
         }
-    }
+    };
 
     window.addEventListener(
         "scroll",
@@ -106,39 +85,36 @@
         { passive: true }
     );
 
-    updateScrollState();
+    updateScrollUI();
 
 
-    /* =====================================================
-       REVEAL ON SCROLL
-    ===================================================== */
+    /* ------------------------------
+       REVEALS
+    ------------------------------ */
 
     const revealElements = $$(".reveal");
 
-    if (
-        reducedMotion ||
-        !("IntersectionObserver" in window)
-    ) {
-        revealElements.forEach(
-            element => element.classList.add("visible")
-        );
-    } else {
+    if (prefersReducedMotion.matches) {
+
+        revealElements.forEach((element) => {
+            element.classList.add("visible");
+        });
+
+    } else if ("IntersectionObserver" in window) {
 
         const revealObserver =
             new IntersectionObserver(
-                entries => {
+                (entries, observer) => {
 
-                    entries.forEach(entry => {
+                    entries.forEach((entry) => {
 
                         if (!entry.isIntersecting) {
                             return;
                         }
 
-                        entry.target.classList.add(
-                            "visible"
-                        );
+                        entry.target.classList.add("visible");
 
-                        revealObserver.unobserve(
+                        observer.unobserve(
                             entry.target
                         );
 
@@ -147,26 +123,31 @@
                 },
                 {
                     threshold: 0.12,
-                    rootMargin:
-                        "0px 0px -40px 0px"
+                    rootMargin: "0px 0px -40px 0px"
                 }
             );
 
-        revealElements.forEach(
-            element =>
-                revealObserver.observe(element)
-        );
+        revealElements.forEach((element) => {
+            revealObserver.observe(element);
+        });
+
+    } else {
+
+        revealElements.forEach((element) => {
+            element.classList.add("visible");
+        });
+
     }
 
 
-    /* =====================================================
+    /* ------------------------------
        CUSTOM CURSOR
-    ===================================================== */
+    ------------------------------ */
 
     if (
         cursor &&
         finePointer &&
-        !reducedMotion
+        !prefersReducedMotion.matches
     ) {
 
         let mouseX = 0;
@@ -175,161 +156,215 @@
         let cursorX = 0;
         let cursorY = 0;
 
+        let cursorFrame = 0;
+
         window.addEventListener(
             "mousemove",
-            event => {
+            (event) => {
+
                 mouseX = event.clientX;
                 mouseY = event.clientY;
+
+                if (!cursorFrame) {
+
+                    cursorFrame =
+                        requestAnimationFrame(() => {
+
+                            cursorX +=
+                                (mouseX - cursorX) * 0.18;
+
+                            cursorY +=
+                                (mouseY - cursorY) * 0.18;
+
+                            cursor.style.left =
+                                `${cursorX}px`;
+
+                            cursor.style.top =
+                                `${cursorY}px`;
+
+                            cursorFrame = 0;
+                        });
+                }
+
             },
             { passive: true }
         );
 
-        function animateCursor() {
+        document.addEventListener(
+            "pointerover",
+            (event) => {
 
-            cursorX +=
-                (mouseX - cursorX) * 0.18;
+                if (
+                    event.target.closest(
+                        "a, button, .service-card, .magnetic"
+                    )
+                ) {
+                    cursor.classList.add("active");
+                }
 
-            cursorY +=
-                (mouseY - cursorY) * 0.18;
+            }
+        );
 
-            cursor.style.left =
-                `${cursorX}px`;
+        document.addEventListener(
+            "pointerout",
+            (event) => {
 
-            cursor.style.top =
-                `${cursorY}px`;
+                const from =
+                    event.target.closest(
+                        "a, button, .service-card, .magnetic"
+                    );
 
-            window.requestAnimationFrame(
-                animateCursor
-            );
-        }
+                const to =
+                    event.relatedTarget?.closest?.(
+                        "a, button, .service-card, .magnetic"
+                    );
 
-        animateCursor();
+                if (from && !to) {
+                    cursor.classList.remove("active");
+                }
 
-        const interactiveElements =
-            $$(
-                "a, button, summary, .service-card"
-            );
-
-        interactiveElements.forEach(
-            element => {
-
-                element.addEventListener(
-                    "mouseenter",
-                    () =>
-                        cursor.classList.add(
-                            "active"
-                        )
-                );
-
-                element.addEventListener(
-                    "mouseleave",
-                    () =>
-                        cursor.classList.remove(
-                            "active"
-                        )
-                );
             }
         );
     }
 
 
-    /* =====================================================
+    /* ------------------------------
        MAGNETIC BUTTONS
-    ===================================================== */
+    ------------------------------ */
 
-    if (finePointer && !reducedMotion) {
+    if (
+        finePointer &&
+        !prefersReducedMotion.matches
+    ) {
 
-        $$(".magnetic").forEach(element => {
+        $$(".magnetic").forEach((element) => {
+
+            let frame = 0;
+            let x = 0;
+            let y = 0;
 
             element.addEventListener(
                 "mousemove",
-                event => {
+                (event) => {
 
                     const rect =
                         element.getBoundingClientRect();
 
-                    const x =
-                        event.clientX -
-                        rect.left -
-                        rect.width / 2;
+                    x =
+                        (
+                            event.clientX -
+                            rect.left -
+                            rect.width / 2
+                        ) * 0.09;
 
-                    const y =
-                        event.clientY -
-                        rect.top -
-                        rect.height / 2;
+                    y =
+                        (
+                            event.clientY -
+                            rect.top -
+                            rect.height / 2
+                        ) * 0.09;
 
-                    element.style.transform =
-                        `translate(
-                            ${x * 0.09}px,
-                            ${y * 0.09}px
-                        )`;
-                }
+                    if (!frame) {
+
+                        frame =
+                            requestAnimationFrame(() => {
+
+                                element.style.transform =
+                                    `translate(${x}px, ${y}px)`;
+
+                                frame = 0;
+                            });
+                    }
+
+                },
+                { passive: true }
             );
 
             element.addEventListener(
                 "mouseleave",
                 () => {
+
+                    if (frame) {
+                        cancelAnimationFrame(frame);
+                    }
+
+                    frame = 0;
                     element.style.transform = "";
+
                 }
             );
 
         });
+
     }
 
 
-    /* =====================================================
+    /* ------------------------------
        HERO PARALLAX
-    ===================================================== */
-
-    const heroWater = $(".hero-water");
-    const orbitOne = $(".orbit-one");
-    const orbitTwo = $(".orbit-two");
+    ------------------------------ */
 
     if (
         hero &&
         finePointer &&
-        !reducedMotion
+        !prefersReducedMotion.matches
     ) {
+
+        const heroWater = $(".hero-water");
+        const orbitOne = $(".orbit-one");
+        const orbitTwo = $(".orbit-two");
+
+        let frame = 0;
+        let x = 0;
+        let y = 0;
 
         hero.addEventListener(
             "mousemove",
-            event => {
+            (event) => {
 
                 const rect =
                     hero.getBoundingClientRect();
 
-                const x =
+                x =
                     (event.clientX - rect.left) /
                     rect.width -
                     0.5;
 
-                const y =
+                y =
                     (event.clientY - rect.top) /
                     rect.height -
                     0.5;
 
-                if (heroWater) {
-                    heroWater.style.marginLeft =
-                        `${x * 35}px`;
+                if (!frame) {
 
-                    heroWater.style.marginTop =
-                        `${y * 25}px`;
-                }
+                    frame =
+                        requestAnimationFrame(() => {
 
-                if (orbitOne) {
-                    orbitOne.style.marginLeft =
-                        `${x * 25}px`;
+                            if (heroWater) {
+                                heroWater.style.transform =
+                                    `translate(
+                                        ${x * 35}px,
+                                        ${y * 25}px
+                                    )`;
+                            }
 
-                    orbitOne.style.marginTop =
-                        `${y * 15}px`;
-                }
+                            if (orbitOne) {
+                                orbitOne.style.marginLeft =
+                                    `${x * 25}px`;
 
-                if (orbitTwo) {
-                    orbitTwo.style.marginLeft =
-                        `${x * -20}px`;
+                                orbitOne.style.marginTop =
+                                    `${y * 15}px`;
+                            }
 
-                    orbitTwo.style.marginTop =
-                        `${y * -12}px`;
+                            if (orbitTwo) {
+                                orbitTwo.style.marginLeft =
+                                    `${x * -20}px`;
+
+                                orbitTwo.style.marginTop =
+                                    `${y * -12}px`;
+                            }
+
+                            frame = 0;
+                        });
                 }
 
             },
@@ -338,77 +373,102 @@
     }
 
 
-    /* =====================================================
+    /* ------------------------------
        SERVICE CARDS
-    ===================================================== */
+    ------------------------------ */
 
     const serviceCards =
         $$(".service-card");
 
-    serviceCards.forEach(card => {
+    serviceCards.forEach((card) => {
 
         card.addEventListener(
             "click",
             () => {
 
-                serviceCards.forEach(
-                    item =>
-                        item.classList.remove(
-                            "active"
-                        )
-                );
+                serviceCards.forEach((item) => {
+                    item.classList.remove("active");
+                });
 
                 card.classList.add("active");
+
             }
         );
 
-        if (
-            finePointer &&
-            !reducedMotion
-        ) {
+    });
+
+    if (
+        finePointer &&
+        !prefersReducedMotion.matches
+    ) {
+
+        serviceCards.forEach((card) => {
+
+            let frame = 0;
+            let rotateX = 0;
+            let rotateY = 0;
 
             card.addEventListener(
                 "mousemove",
-                event => {
+                (event) => {
 
                     const rect =
                         card.getBoundingClientRect();
 
-                    const x =
-                        event.clientX - rect.left;
+                    rotateX =
+                        (
+                            (event.clientY - rect.top) /
+                            rect.height -
+                            0.5
+                        ) * -3;
 
-                    const y =
-                        event.clientY - rect.top;
+                    rotateY =
+                        (
+                            (event.clientX - rect.left) /
+                            rect.width -
+                            0.5
+                        ) * 3;
 
-                    const rotateX =
-                        ((y / rect.height) - 0.5) *
-                        -3;
+                    if (!frame) {
 
-                    const rotateY =
-                        ((x / rect.width) - 0.5) *
-                        3;
+                        frame =
+                            requestAnimationFrame(() => {
 
-                    card.style.transform =
-                        `perspective(900px)
-                         rotateX(${rotateX}deg)
-                         rotateY(${rotateY}deg)`;
-                }
+                                card.style.transform =
+                                    `perspective(900px)
+                                     rotateX(${rotateX}deg)
+                                     rotateY(${rotateY}deg)`;
+
+                                frame = 0;
+                            });
+                    }
+
+                },
+                { passive: true }
             );
 
             card.addEventListener(
                 "mouseleave",
                 () => {
+
+                    if (frame) {
+                        cancelAnimationFrame(frame);
+                    }
+
+                    frame = 0;
                     card.style.transform = "";
+
                 }
             );
-        }
 
-    });
+        });
+
+    }
 
 
-    /* =====================================================
+    /* ------------------------------
        PROCESS TIMELINE
-    ===================================================== */
+    ------------------------------ */
 
     const processTimeline =
         $(".process-timeline");
@@ -420,25 +480,21 @@
 
         const processObserver =
             new IntersectionObserver(
-                entries => {
+                (entries, observer) => {
 
-                    entries.forEach(entry => {
-
-                        if (
-                            !entry.isIntersecting
-                        ) {
-                            return;
-                        }
+                    if (
+                        entries.some(
+                            (entry) =>
+                                entry.isIntersecting
+                        )
+                    ) {
 
                         processTimeline.classList.add(
                             "active"
                         );
 
-                        processObserver.unobserve(
-                            processTimeline
-                        );
-
-                    });
+                        observer.disconnect();
+                    }
 
                 },
                 {
@@ -452,181 +508,127 @@
     }
 
 
-    /* =====================================================
+    /* ------------------------------
        MOBILE MENU
-    ===================================================== */
+    ------------------------------ */
 
-    const menuToggle =
-        $("#menuToggle");
+    const closeMobileMenu = () => {
 
-    const mobileMenu =
-        $("#mobileMenu");
+        mobileMenu?.classList.remove("open");
 
-    const mobileLinks =
-        $$(".mobile-menu a");
+        menuToggle?.classList.remove("open");
 
-    function closeMobileMenu() {
-
-        if (!menuToggle || !mobileMenu) {
-            return;
-        }
-
-        mobileMenu.classList.remove("open");
-
-        menuToggle.classList.remove("open");
-
-        menuToggle.setAttribute(
+        menuToggle?.setAttribute(
             "aria-expanded",
             "false"
         );
 
-        mobileMenu.setAttribute(
+        mobileMenu?.setAttribute(
             "aria-hidden",
             "true"
         );
 
-        body.classList.remove(
-            "menu-open"
-        );
-    }
-
-    function openMobileMenu() {
-
-        if (!menuToggle || !mobileMenu) {
-            return;
-        }
-
-        mobileMenu.classList.add("open");
-
-        menuToggle.classList.add("open");
-
-        menuToggle.setAttribute(
-            "aria-expanded",
-            "true"
-        );
-
-        mobileMenu.setAttribute(
-            "aria-hidden",
-            "false"
-        );
-
-        body.classList.add(
-            "menu-open"
-        );
-    }
+        body.classList.remove("menu-open");
+    };
 
     menuToggle?.addEventListener(
         "click",
         () => {
 
             const isOpen =
-                mobileMenu.classList.contains(
-                    "open"
-                );
+                mobileMenu.classList.toggle("open");
 
-            if (isOpen) {
-                closeMobileMenu();
-            } else {
-                openMobileMenu();
-            }
+            menuToggle.classList.toggle(
+                "open",
+                isOpen
+            );
+
+            menuToggle.setAttribute(
+                "aria-expanded",
+                String(isOpen)
+            );
+
+            mobileMenu.setAttribute(
+                "aria-hidden",
+                String(!isOpen)
+            );
+
+            body.classList.toggle(
+                "menu-open",
+                isOpen
+            );
 
         }
     );
 
-    mobileLinks.forEach(
-        link =>
-            link.addEventListener(
-                "click",
-                closeMobileMenu
-            )
-    );
-
-
-    /* =====================================================
-       SMOOTH ANCHOR SCROLL
-    ===================================================== */
-
-    $$('a[href^="#"]').forEach(link => {
+    $$(".mobile-menu a").forEach((link) => {
 
         link.addEventListener(
             "click",
-            event => {
-
-                const targetId =
-                    link.getAttribute("href");
-
-                if (
-                    !targetId ||
-                    targetId === "#"
-                ) {
-                    return;
-                }
-
-                const target =
-                    document.querySelector(
-                        targetId
-                    );
-
-                if (!target) {
-                    return;
-                }
-
-                event.preventDefault();
-
-                const navHeight =
-                    navbar
-                        ? navbar.offsetHeight
-                        : 0;
-
-                const targetPosition =
-                    target.getBoundingClientRect()
-                        .top +
-                    window.scrollY -
-                    navHeight;
-
-                window.scrollTo({
-                    top: targetPosition,
-                    behavior:
-                        reducedMotion
-                            ? "auto"
-                            : "smooth"
-                });
-
-            }
+            closeMobileMenu
         );
 
     });
 
 
-    /* =====================================================
-       ESCAPE KEY
-    ===================================================== */
+    /* ------------------------------
+       SMOOTH ANCHORS
+    ------------------------------ */
 
     document.addEventListener(
-        "keydown",
-        event => {
+        "click",
+        (event) => {
 
-            if (event.key !== "Escape") {
+            const link =
+                event.target.closest(
+                    'a[href^="#"]'
+                );
+
+            if (!link) return;
+
+            const targetId =
+                link.getAttribute("href");
+
+            if (
+                !targetId ||
+                targetId === "#"
+            ) {
                 return;
             }
 
-            closeMobileMenu();
+            const target =
+                document.querySelector(
+                    targetId
+                );
 
-            if (
-                contactModal &&
-                contactModal.classList.contains(
-                    "open"
-                )
-            ) {
-                closeContactModal();
-            }
+            if (!target) return;
+
+            event.preventDefault();
+
+            const offset =
+                navbar?.offsetHeight || 0;
+
+            window.scrollTo({
+
+                top:
+                    target.getBoundingClientRect().top +
+                    window.scrollY -
+                    offset,
+
+                behavior:
+                    prefersReducedMotion.matches
+                        ? "auto"
+                        : "smooth"
+
+            });
+
         }
     );
 
 
-    /* =====================================================
+    /* ------------------------------
        STATEMENT PARALLAX
-    ===================================================== */
+    ------------------------------ */
 
     const statement =
         $(".statement");
@@ -638,28 +640,38 @@
         statement &&
         statementLiquid &&
         finePointer &&
-        !reducedMotion
+        !prefersReducedMotion.matches
     ) {
+
+        let frame = 0;
+
+        const updateStatement = () => {
+
+            frame = 0;
+
+            const rect =
+                statement.getBoundingClientRect();
+
+            const movement =
+                (
+                    rect.top -
+                    window.innerHeight / 2
+                ) * -0.035;
+
+            statementLiquid.style.transform =
+                `translateY(${movement}px)`;
+        };
 
         window.addEventListener(
             "scroll",
             () => {
 
-                const rect =
-                    statement.getBoundingClientRect();
-
-                const viewportCenter =
-                    window.innerHeight / 2;
-
-                const distance =
-                    rect.top -
-                    viewportCenter;
-
-                const movement =
-                    distance * -0.035;
-
-                statementLiquid.style.marginTop =
-                    `${movement}px`;
+                if (!frame) {
+                    frame =
+                        requestAnimationFrame(
+                            updateStatement
+                        );
+                }
 
             },
             { passive: true }
@@ -667,9 +679,9 @@
     }
 
 
-    /* =====================================================
+    /* ------------------------------
        CONTACT ORB
-    ===================================================== */
+    ------------------------------ */
 
     const contact =
         $(".contact");
@@ -681,31 +693,44 @@
         contact &&
         contactOrb &&
         finePointer &&
-        !reducedMotion
+        !prefersReducedMotion.matches
     ) {
+
+        let frame = 0;
+        let x = 0;
+        let y = 0;
 
         contact.addEventListener(
             "mousemove",
-            event => {
+            (event) => {
 
                 const rect =
                     contact.getBoundingClientRect();
 
-                const x =
+                x =
                     (event.clientX - rect.left) /
                     rect.width -
                     0.5;
 
-                const y =
+                y =
                     (event.clientY - rect.top) /
                     rect.height -
                     0.5;
 
-                contactOrb.style.marginLeft =
-                    `${x * 35}px`;
+                if (!frame) {
 
-                contactOrb.style.marginTop =
-                    `${y * 25}px`;
+                    frame =
+                        requestAnimationFrame(() => {
+
+                            contactOrb.style.transform =
+                                `translate(
+                                    calc(-50% + ${x * 35}px),
+                                    calc(-50% + ${y * 25}px)
+                                )`;
+
+                            frame = 0;
+                        });
+                }
 
             },
             { passive: true }
@@ -713,9 +738,9 @@
     }
 
 
-    /* =====================================================
-       DARK SECTION CURSOR
-    ===================================================== */
+    /* ------------------------------
+       DARK-SECTION CURSOR STATE
+    ------------------------------ */
 
     if (
         cursor &&
@@ -726,25 +751,31 @@
         const darkSections =
             $$(".about, .contact");
 
+        const activeSections =
+            new Set();
+
         const darkObserver =
             new IntersectionObserver(
-                entries => {
+                (entries) => {
 
-                    entries.forEach(entry => {
+                    entries.forEach((entry) => {
 
-                        if (
-                            entry.isIntersecting
-                        ) {
-                            cursor.classList.add(
-                                "dark"
+                        if (entry.isIntersecting) {
+                            activeSections.add(
+                                entry.target
                             );
                         } else {
-                            cursor.classList.remove(
-                                "dark"
+                            activeSections.delete(
+                                entry.target
                             );
                         }
 
                     });
+
+                    cursor.classList.toggle(
+                        "dark",
+                        activeSections.size > 0
+                    );
 
                 },
                 {
@@ -752,121 +783,32 @@
                 }
             );
 
-        darkSections.forEach(
-            section =>
-                darkObserver.observe(section)
-        );
+        darkSections.forEach((section) => {
+            darkObserver.observe(section);
+        });
+
     }
 
 
-    /* =====================================================
-       CONTACT MODAL
-    ===================================================== */
+    /* ------------------------------
+       CONTACT MODAL + FORM
+    ------------------------------ */
 
-    const contactModal =
-        $("#contactModal");
-
-    const openContactButton =
+    const openContactModal =
         $("#openContactModal");
 
-    const closeContactButton =
+    const closeContactModal =
         $("#closeContactModal");
-
-    const modalBackdrop =
-        $(".modal-backdrop");
-
-    let lastFocusedElement = null;
-
-    function openContactModal() {
-
-        if (!contactModal) {
-            return;
-        }
-
-        lastFocusedElement =
-            document.activeElement;
-
-        contactModal.classList.add(
-            "open"
-        );
-
-        contactModal.setAttribute(
-            "aria-hidden",
-            "false"
-        );
-
-        body.classList.add(
-            "modal-open"
-        );
-
-        window.setTimeout(
-            () =>
-                closeContactButton?.focus(),
-            50
-        );
-    }
-
-    function closeContactModal() {
-
-        if (!contactModal) {
-            return;
-        }
-
-        contactModal.classList.remove(
-            "open"
-        );
-
-        contactModal.setAttribute(
-            "aria-hidden",
-            "true"
-        );
-
-        body.classList.remove(
-            "modal-open"
-        );
-
-        lastFocusedElement?.focus();
-    }
-
-    openContactButton?.addEventListener(
-        "click",
-        openContactModal
-    );
-
-    closeContactButton?.addEventListener(
-        "click",
-        closeContactModal
-    );
-
-    modalBackdrop?.addEventListener(
-        "click",
-        closeContactModal
-    );
-
-
-    /* =====================================================
-       CONTACT FORM
-    ===================================================== */
-
-    const contactForm =
-        $("#contactForm");
-
-    const formSubmit =
-        $("#formSubmit");
 
     const STORAGE_KEY =
         "coast-contact-draft";
 
-    function showToast(
-        message,
-        type = "success"
-    ) {
 
-        const toast =
-            $("#toast");
+    /* ------------------------------
+       TOAST
+    ------------------------------ */
 
-        const toastMessage =
-            $("#toastMessage");
+    const showToast = (message) => {
 
         if (!toast || !toastMessage) {
             return;
@@ -875,231 +817,296 @@
         toastMessage.textContent =
             message;
 
-        toast.dataset.type =
-            type;
+        toast.classList.add("show");
 
-        toast.classList.add(
-            "show"
-        );
+        clearTimeout(showToast.timer);
 
-        window.setTimeout(
-            () =>
-                toast.classList.remove(
-                    "show"
-                ),
-            3500
-        );
-    }
+        showToast.timer =
+            setTimeout(() => {
+
+                toast.classList.remove("show");
+
+            }, 3200);
+    };
 
 
-    function saveDraft() {
+    /* ------------------------------
+       MODAL
+    ------------------------------ */
 
-        if (!contactForm) {
+    const setModal = (open) => {
+
+        if (!contactModal) {
             return;
         }
 
-        const data =
-            Object.fromEntries(
-                new FormData(
-                    contactForm
-                ).entries()
+        contactModal.classList.toggle(
+            "open",
+            open
+        );
+
+        contactModal.setAttribute(
+            "aria-hidden",
+            String(!open)
+        );
+
+        body.classList.toggle(
+            "modal-open",
+            open
+        );
+
+        if (open) {
+
+            setTimeout(
+                () => {
+
+                    $(
+                        "input, select, textarea",
+                        contactForm
+                    )?.focus();
+
+                },
+                80
             );
 
-        delete data["form-name"];
-        delete data["bot-field"];
+        } else {
 
-        try {
-            localStorage.setItem(
-                STORAGE_KEY,
-                JSON.stringify(data)
-            );
-        } catch {
-            /* Storage may be disabled. */
+            openContactModal?.focus();
+
         }
-    }
+    };
 
 
-    function loadDraft() {
+    openContactModal?.addEventListener(
+        "click",
+        () => setModal(true)
+    );
 
-        if (!contactForm) {
-            return;
+    closeContactModal?.addEventListener(
+        "click",
+        () => setModal(false)
+    );
+
+    contactModal?.addEventListener(
+        "click",
+        (event) => {
+
+            if (
+                event.target.matches(
+                    "[data-close-modal]"
+                )
+            ) {
+                setModal(false);
+            }
+
         }
+    );
 
-        try {
 
-            const raw =
-                localStorage.getItem(
-                    STORAGE_KEY
-                );
+    document.addEventListener(
+        "keydown",
+        (event) => {
 
-            if (!raw) {
+            if (event.key !== "Escape") {
                 return;
             }
 
-            const data =
-                JSON.parse(raw);
-
-            Object.entries(data).forEach(
-                ([name, value]) => {
-
-                    const field =
-                        contactForm.elements[name];
-
-                    if (field) {
-                        field.value =
-                            value;
-                    }
-                }
-            );
-
-        } catch {
-            /* Ignore corrupt storage. */
-        }
-    }
-
-
-    function clearDraft() {
-
-        try {
-            localStorage.removeItem(
-                STORAGE_KEY
-            );
-        } catch {
-            /* Ignore storage errors. */
-        }
-    }
-
-
-    function clearFieldError(field) {
-
-        const wrapper =
-            field.closest("label");
-
-        if (!wrapper) {
-            return;
-        }
-
-        wrapper.classList.remove(
-            "invalid"
-        );
-
-        const error =
-            $(".field-error", wrapper);
-
-        if (error) {
-            error.textContent = "";
-        }
-    }
-
-
-    function setFieldError(
-        field,
-        message
-    ) {
-
-        const wrapper =
-            field.closest("label");
-
-        if (!wrapper) {
-            return;
-        }
-
-        wrapper.classList.add(
-            "invalid"
-        );
-
-        const error =
-            $(".field-error", wrapper);
-
-        if (error) {
-            error.textContent =
-                message;
-        }
-    }
-
-
-    function validateField(field) {
-
-        clearFieldError(field);
-
-        if (
-            field.hasAttribute("required") &&
-            !field.value.trim()
-        ) {
-
-            setFieldError(
-                field,
-                "This field is required."
-            );
-
-            return false;
-        }
-
-        if (
-            field.type === "email" &&
-            field.value
-        ) {
-
-            const validEmail =
-                /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-                    .test(
-                        field.value.trim()
-                    );
-
-            if (!validEmail) {
-
-                setFieldError(
-                    field,
-                    "Enter a valid email address."
-                );
-
-                return false;
-            }
-        }
-
-        const minimum =
-            Number(
-                field.getAttribute(
-                    "minlength"
+            if (
+                contactModal?.classList.contains(
+                    "open"
                 )
-            );
+            ) {
+                setModal(false);
+            }
 
-        if (
-            minimum &&
-            field.value.trim().length <
-            minimum
-        ) {
+            if (
+                mobileMenu?.classList.contains(
+                    "open"
+                )
+            ) {
+                closeMobileMenu();
+            }
 
-            setFieldError(
-                field,
-                `Please enter at least ${minimum} characters.`
-            );
-
-            return false;
         }
+    );
 
-        return true;
-    }
 
+    /* ------------------------------
+       CONTACT FORM
+    ------------------------------ */
 
     if (contactForm) {
 
-        loadDraft();
+        const fields =
+            $$(
+                "input, select, textarea",
+                contactForm
+            );
 
-        $$(
-            "input, select, textarea",
-            contactForm
-        ).forEach(field => {
+
+        /* DRAFT SAVING */
+
+        const saveDraft = () => {
+
+            const data =
+                Object.fromEntries(
+                    new FormData(
+                        contactForm
+                    ).entries()
+                );
+
+            try {
+
+                localStorage.setItem(
+                    STORAGE_KEY,
+                    JSON.stringify(data)
+                );
+
+            } catch {}
+
+        };
+
+
+        /* FIELD ERRORS */
+
+        const clearFieldError =
+            (field) => {
+
+                field.classList.remove(
+                    "invalid"
+                );
+
+                const error =
+                    field.parentElement.querySelector(
+                        ".field-error"
+                    );
+
+                if (error) {
+                    error.textContent = "";
+                }
+            };
+
+
+        const setFieldError =
+            (field, message) => {
+
+                field.classList.add(
+                    "invalid"
+                );
+
+                const error =
+                    field.parentElement.querySelector(
+                        ".field-error"
+                    );
+
+                if (error) {
+                    error.textContent =
+                        message;
+                }
+            };
+
+
+        /* VALIDATION */
+
+        const validateField =
+            (field) => {
+
+                clearFieldError(field);
+
+                if (!field.value.trim()) {
+
+                    setFieldError(
+                        field,
+                        "This field is required."
+                    );
+
+                    return false;
+                }
+
+                if (
+                    field.name === "name" &&
+                    field.value.trim().length < 2
+                ) {
+
+                    setFieldError(
+                        field,
+                        "Please enter your name."
+                    );
+
+                    return false;
+                }
+
+                if (
+                    field.name === "email" &&
+                    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/
+                        .test(field.value.trim())
+                ) {
+
+                    setFieldError(
+                        field,
+                        "Please enter a valid email."
+                    );
+
+                    return false;
+                }
+
+                if (
+                    field.name === "message" &&
+                    field.value.trim().length < 10
+                ) {
+
+                    setFieldError(
+                        field,
+                        "Please give us a little more detail."
+                    );
+
+                    return false;
+                }
+
+                return true;
+            };
+
+
+        /* RESTORE SAVED DRAFT */
+
+        try {
+
+            const saved =
+                JSON.parse(
+                    localStorage.getItem(
+                        STORAGE_KEY
+                    ) || "null"
+                );
+
+            if (saved) {
+
+                fields.forEach((field) => {
+
+                    if (
+                        saved[field.name] !== undefined
+                    ) {
+                        field.value =
+                            saved[field.name];
+                    }
+
+                });
+
+            }
+
+        } catch {}
+
+
+        /* LIVE DRAFT SAVING */
+
+        fields.forEach((field) => {
 
             field.addEventListener(
                 "input",
                 () => {
 
-                    clearFieldError(
-                        field
-                    );
-
+                    clearFieldError(field);
                     saveDraft();
+
                 }
             );
 
@@ -1111,103 +1118,192 @@
         });
 
 
+        /* REAL FORM SUBMISSION */
+
         contactForm.addEventListener(
             "submit",
-            event => {
+            async (event) => {
 
-                let valid = true;
+                event.preventDefault();
 
-                $$(
-                    "input:not([type='hidden']), select, textarea",
-                    contactForm
-                ).forEach(field => {
 
-                    if (
-                        !validateField(
-                            field
-                        )
-                    ) {
-                        valid = false;
-                    }
+                /* Validate */
 
-                });
+                const valid =
+                    fields.every(
+                        validateField
+                    );
 
                 if (!valid) {
 
-                    event.preventDefault();
-
                     showToast(
-                        "Please check the highlighted fields.",
-                        "error"
+                        "Please check the highlighted fields."
                     );
-
-                    const firstInvalid =
-                        $(".invalid input, .invalid select, .invalid textarea");
-
-                    firstInvalid?.focus();
 
                     return;
                 }
 
-                /*
-                    Netlify handles the actual submission.
 
-                    We intentionally do not fake a successful
-                    backend response here.
-                */
+                /* Get form data */
 
-                if (formSubmit) {
+                const data =
+                    Object.fromEntries(
+                        new FormData(
+                            contactForm
+                        ).entries()
+                    );
 
-                    formSubmit.disabled =
-                        true;
 
-                    const spans =
-                        $$(
-                            "span",
-                            formSubmit
-                        );
+                /* Loading state */
 
-                    if (spans[0]) {
-                        spans[0].textContent =
-                            "SENDING...";
-                    }
+                const submitButton =
+                    contactForm.querySelector(
+                        ".form-submit"
+                    );
+
+                const originalButtonHTML =
+                    submitButton?.innerHTML;
+
+                if (submitButton) {
+
+                    submitButton.disabled = true;
+
+                    submitButton.setAttribute(
+                        "aria-busy",
+                        "true"
+                    );
+
+                    submitButton.innerHTML =
+                        `
+                        <span>SENDING...</span>
+                        <span>↗</span>
+                        `;
                 }
 
-                clearDraft();
+
+                try {
+
+                    const response =
+                        await fetch(
+                            "/api/contact",
+                            {
+                                method: "POST",
+
+                                headers: {
+                                    "Content-Type":
+                                        "application/json",
+
+                                    "Accept":
+                                        "application/json"
+                                },
+
+                                body:
+                                    JSON.stringify({
+                                        name:
+                                            data.name,
+
+                                        email:
+                                            data.email,
+
+                                        type:
+                                            data.type,
+
+                                        message:
+                                            data.message
+                                    })
+                            }
+                        );
+
+
+                    let result = null;
+
+                    try {
+                        result =
+                            await response.json();
+                    } catch {}
+
+
+                    if (!response.ok) {
+
+                        throw new Error(
+                            result?.error ||
+                            "Something went wrong."
+                        );
+                    }
+
+
+                    /* Success */
+
+                    try {
+
+                        localStorage.removeItem(
+                            STORAGE_KEY
+                        );
+
+                    } catch {}
+
+
+                    contactForm.reset();
+
+                    setModal(false);
+
+                    showToast(
+                        "Enquiry sent. We'll be in touch."
+                    );
+
+
+                } catch (error) {
+
+                    console.error(
+                        "COAST enquiry error:",
+                        error
+                    );
+
+                    showToast(
+                        error?.message ||
+                        "Could not send the enquiry. Please try again."
+                    );
+
+                } finally {
+
+                    if (submitButton) {
+
+                        submitButton.disabled =
+                            false;
+
+                        submitButton.removeAttribute(
+                            "aria-busy"
+                        );
+
+                        submitButton.innerHTML =
+                            originalButtonHTML ||
+                            `
+                            <span>SEND ENQUIRY</span>
+                            <span>↗</span>
+                            `;
+
+                    }
+
+                }
+
             }
         );
+
     }
 
 
-    /* =====================================================
+    /* ------------------------------
        FOOTER YEAR
-    ===================================================== */
+    ------------------------------ */
 
     const currentYear =
         $("#currentYear");
 
     if (currentYear) {
+
         currentYear.textContent =
             new Date().getFullYear();
+
     }
-
-
-    /* =====================================================
-       MOBILE / MODAL ACCESSIBILITY
-    ===================================================== */
-
-    window.addEventListener(
-        "resize",
-        () => {
-
-            if (
-                window.innerWidth > 900
-            ) {
-                closeMobileMenu();
-            }
-
-        },
-        { passive: true }
-    );
 
 })();
