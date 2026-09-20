@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>404 — COAST WATER</title>
+    <meta
+        name="description"
+        content="This COAST WATER page could not be found."
+    >
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#49231f">
+
+    <link rel="icon" type="image/png" href="assets/images/Coast Logo.png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet"
+    >
+
+    <style>
+        :root {
+            --brown: #49231f;
+            --cream: #e5ded9;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            min-height: 100%;
+        }
+
+        body {
+            min-height: 100vh;
+            background: var(--brown);
+            color: var(--cream);
+            font-family: "Manrope", sans-serif;
+            display: grid;
+            place-items: center;
+            padding: 32px;
+        }
+
+        .page {
+            width: min(1000px, 100%);
+            text-align: center;
+        }
+
+        .logo {
+            width: min(180px, 45vw);
+            height: auto;
+            margin-bottom: 65px;
+            filter: brightness(0) invert(1);
+            opacity: .95;
+        }
+
+        .code {
+            font-family: "DM Mono", monospace;
+            font-size: clamp(100px, 24vw, 280px);
+            line-height: .75;
+            letter-spacing: -.09em;
+            margin: 0;
+            opacity: .95;
+        }
+
+        .eyebrow {
+            margin-top: 55px;
+            font-family: "DM Mono", monospace;
+            font-size: 11px;
+            letter-spacing: .18em;
+            text-transform: uppercase;
+            opacity: .65;
+        }
+
+        h1 {
+            margin: 18px 0 0;
+            font-size: clamp(32px, 5vw, 64px);
+            letter-spacing: -.05em;
+            line-height: .95;
+        }
+
+        p {
+            max-width: 520px;
+            margin: 25px auto 38px;
+            font-size: 16px;
+            line-height: 1.7;
+            opacity: .75;
+        }
+
+        a {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--brown);
+            background: var(--cream);
+            text-decoration: none;
+            padding: 17px 24px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            transition:
+                transform .25s ease,
+                background .25s ease;
+        }
+
+        a:hover {
+            transform: translateY(-3px);
+            background: #fff;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 24px;
+            }
+
+            .logo {
+                margin-bottom: 45px;
+            }
+
+            .eyebrow {
+                margin-top: 45px;
+            }
+
+            p {
+                font-size: 15px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <main class="page">
+
+        <img
+            class="logo"
+            src="assets/images/Coast Logo.png"
+            alt="COAST WATER"
+        >
+
+        <div class="code">404</div>
+
+        <div class="eyebrow">PAGE NOT FOUND</div>
+
+        <h1>Wrong coast.</h1>
+
+        <p>
+            This page doesn't exist, but the good stuff is still
+            waiting at COAST.
+        </p>
+
+        <a href="index.html">
+            BACK TO COAST
+            <span>↗</span>
+        </a>
+
+    </main>
+
+</body>
+</html>
